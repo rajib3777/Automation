@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Wafid Multi-Center System</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='enhanced_style.css') }}">
+    <style>
+        /* Design System - Dark Mode First */
+        :root {
+            /* Color System */
+            --primary-purple: #7C3AED;
+            --primary-blue: #3B82F6;
+            --accent-gradient: linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%);
+            
+            /* Background System */
+            --bg-page: #000000;
+            --bg-surface-1: #121212;
+            --bg-surface-2: #1E1E1E;
+            
+            /* Border System */
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --border-default: rgba(255, 255, 255, 0.2);
+            
+            /* Text System */
+            --text-primary: #E4E4E7;
+            --text-secondary: #A1A1AA;
+            --text-disabled: #52525B;
+            --text-accent: #C4B5FD;
+            
+            /* Status Colors */
+            --status-success: #22C55E;
+            --status-warning: #F59E0B;
+            --status-error: #EF4444;
+            --status-live: #3B82F6;
+            
+            /* Spacing System (8px base) */
+            --space-xs: 8px;
+            --space-sm: 16px;
+            --space-md: 24px;
+            --space-lg: 32px;
+            --space-xl: 48px;
+            
+            /* Typography */
+            --font-family: 'Inter', sans-serif;
+            
+            /* Shadows (Glows for dark theme) */
+            --glow-primary: 0 0 16px 0 rgba(124, 58, 237, 0.3);
+            --glow-success: 0 0 12px 0 rgba(34, 197, 94, 0.4);
+            --glow-error: 0 0 12px 0 rgba(239, 68, 68, 0.4);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Authentication Modal */
+        .auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .auth-card {
+            background: var(--bg-surface-1);
+            border: 1px solid var(--border-default);
+            border-radius: 16px;
+            padding: var(--space-xl);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            backdrop-filter: blur(16px);
+            box-shadow: var(--glow-primary);
+        }
+        
+        .auth-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: var(--space-lg);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .auth-input {
+            width: 100%;
+            height: 48px;
+            background: var(--bg-surface-2);
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            padding: 0 var(--space-sm);
+            color: var(--text-primary);
+            font-size: 16px;
+            margin-bottom: var(--space-md);
+        }
+        
+        .auth-input:focus {
+            outline: none;
+            border-color: var(--primary-purple);
+            box-shadow: var(--glow-primary);
+        }
+        
+        .btn {
+            height: 48px;
+            padding: 0 var(--space-lg);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: var(--text-primary);
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.03);
+            box-shadow: var(--glow-primary);
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-surface-1);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: var(--space-md) var(--space-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(16px);
+        }
+        
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: var(--space-sm);
+            align-items: center;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--status-success);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .stat-card {
+            background: var(--bg-surface-1);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: var(--space-md);
+            backdrop-filter: blur(16px);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            background: var(--bg-surface-2);
+            border-color: var(--border-default);
+            transform: translateY(-4px);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: var(--space-xs);
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .stat-change {
+            font-size: 14px;
+            margin-top: var(--space-xs);
+        }
+        
+        .stat-change.positive {
+            color: var(--status-success);
+        }
+        
+        .stat-change.negative {
+            color: var(--status-error);
+        }
+        
+        /* Control Panel */
+        .control-panel {
+            background: var(--bg-surface-1);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .automation-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .toggle-switch {
+            width: 60px;
+            height: 32px;
+            background: var(--bg-surface-2);
+            border-radius: 16px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-switch.active {
+            background: var(--accent-gradient);
+        }
+        
+        .toggle-handle {
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-switch.active .toggle-handle {
+            transform: translateX(28px);
+        }
+        
+        /* Center Grid */
+        .centers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .center-card {
+            background: var(--bg-surface-1);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: var(--space-md);
+            transition: all 0.3s ease;
+        }
+        
+        .center-card:hover {
+            background: var(--bg-surface-2);
+            border-color: var(--border-default);
+            transform: translateY(-4px);
+        }
+        
+        .center-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-sm);
+        }
+        
+        .center-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .center-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .center-status.active {
+            background: var(--status-success);
+            box-shadow: var(--glow-success);
+        }
+        
+        .center-status.inactive {
+            background: var(--status-error);
+        }
+        
+        .center-status.maintenance {
+            background: var(--status-warning);
+        }
+        
+        .center-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: var(--space-sm);
+            margin: var(--space-sm) 0;
+        }
+        
+        .metric-item {
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-surface-2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: var(--space-sm) 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-gradient);
+            transition: width 0.3s ease;
+        }
+        
+        /* Add Center Form */
+        .add-center-form {
+            background: var(--bg-surface-1);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+            display: none;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-sm);
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+        
+        .form-input {
+            height: 44px;
+            background: var(--bg-surface-2);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            padding: 0 var(--space-sm);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-purple);
+        }
+        
+        /* Analytics Section */
+        .analytics-section {
+            background: var(--bg-surface-1);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .analytics-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: var(--space-md);
+            color: var(--text-primary);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: var(--space-md);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .centers-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                padding: var(--space-sm);
+            }
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .centers-grid {
+                grid-template-columns: 1fr;
+            }
+            .control-panel {
+                flex-direction: column;
+                gap: var(--space-sm);
+                align-items: stretch;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            top: 100px;
+            right: var(--space-md);
+            background: var(--bg-surface-2);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            padding: var(--space-sm) var(--space-md);
+            color: var(--text-primary);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            border-color: var(--status-success);
+            box-shadow: var(--glow-success);
+        }
+        
+        .toast.error {
+            border-color: var(--status-error);
+            box-shadow: var(--glow-error);
+        }
+        
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-subtle);
+            border-top: 2px solid var(--primary-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Modal -->
+    {% if not authenticated %}
+    <div class="auth-modal" id="authModal">
+        <div class="auth-card">
+            <h2 class="auth-title">🤖 Enhanced Wafid System</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                Multi-Center Automation Platform - 2025 Edition
+            </p>
+            <input type="password" 
+                   class="auth-input" 
+                   id="passwordInput" 
+                   placeholder="Enter system password"
+                   autofocus>
+            <button class="btn btn-primary" onclick="authenticate()" style="width: 100%;">
+                🔓 Access System
+            </button>
+            <p id="authMessage" style="margin-top: 16px; color: var(--status-error);"></p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                🚀 Enhanced Wafid Multi-Center System
+            </div>
+            <div class="header-actions">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="status-indicator"></div>
+                    <span style="color: var(--text-secondary); font-size: 14px;">System Active</span>
+                </div>
+                <button class="btn btn-primary" onclick="logout()">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Statistics Cards -->
+        <div class="dashboard-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-label">Total Centers</div>
+                <div class="stat-value" id="totalCenters">-</div>
+                <div class="stat-change positive" id="centerChange">+2 this month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Automations</div>
+                <div class="stat-value" id="activeAutomations">-</div>
+                <div class="stat-change positive" id="automationStatus">Running</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Daily Revenue</div>
+                <div class="stat-value" id="dailyRevenue">$0</div>
+                <div class="stat-change positive" id="revenueGrowth">+12.5%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Success Rate</div>
+                <div class="stat-value" id="successRate">0%</div>
+                <div class="stat-change positive" id="rateTrend">+2.1%</div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <h3 style="color: var(--text-primary); margin: 0;">🤖 Automation Control</h3>
+                <div class="automation-toggle">
+                    <span style="color: var(--text-secondary);">Enhanced AI Booking</span>
+                    <div class="toggle-switch" id="automationToggle" onclick="toggleAutomation()">
+                        <div class="toggle-handle"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-primary" onclick="toggleAddCenter()">
+                    ➕ Add Center
+                </button>
+                <button class="btn btn-primary" onclick="refreshAnalytics()">
+                    📊 Refresh Analytics
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Center Form -->
+        <div class="add-center-form" id="addCenterForm">
+            <h3 style="color: var(--text-primary); margin-bottom: 16px;">➕ Add New Center</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Center Name</label>
+                    <input type="text" class="form-input" id="centerName" placeholder="e.g., Downtown Medical Hub">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-input" id="centerLocation" placeholder="e.g., Downtown District">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Capacity</label>
+                    <input type="number" class="form-input" id="centerCapacity" placeholder="e.g., 50">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Daily Target</label>
+                    <input type="number" class="form-input" id="dailyTarget" placeholder="e.g., 100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Automation Level</label>
+                    <select class="form-input" id="automationLevel">
+                        <option value="basic">Basic</option>
+                        <option value="standard" selected>Standard</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priority Level (1-5)</label>
+                    <input type="number" class="form-input" id="priorityLevel" min="1" max="5" value="3">
+                </div>
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn" onclick="toggleAddCenter()" style="background: var(--bg-surface-2); color: var(--text-secondary);">
+                    Cancel
+                </button>
+                <button class="btn btn-primary" onclick="addCenter()">
+                    ➕ Add Center
+                </button>
+            </div>
+        </div>
+
+        <!-- Centers Grid -->
+        <div class="centers-grid" id="centersGrid">
+            <!-- Centers will be loaded here -->
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="analytics-section">
+            <div class="analytics-header">📊 Real-Time Analytics</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div>
+                    <h4 style="color: var(--text-secondary); margin-bottom: 12px;">Booking Trends (24h)</h4>
+                    <div class="chart-container">
+                        <canvas id="bookingTrendsChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="color: var(--text-secondary); margin-bottom: 12px;">Center Performance</h4>
+                    <div class="chart-container">
+                        <canvas id="centerPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // Global variables
+        let socket = null;
+        let automationRunning = false;
+        let centersData = [];
+        let charts = {};
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if authenticated %}
+            initializeSocket();
+            loadCenters();
+            loadAnalytics();
+            updateAutomationStatus();
+            {% endif %}
+        });
+
+        // Authentication functions
+        function authenticate() {
+            const password = document.getElementById('passwordInput').value;
+            const message = document.getElementById('authMessage');
+            
+            if (!password) {
+                message.textContent = 'Please enter password';
+                return;
+            }
+
+            message.textContent = 'Authenticating...';
+            
+            fetch('/authenticate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    message.textContent = data.message;
+                    document.getElementById('passwordInput').value = '';
+                }
+            })
+            .catch(error => {
+                message.textContent = 'Authentication failed';
+            });
+        }
+
+        // Socket.IO initialization
+        function initializeSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                showToast('Connected to real-time updates', 'success');
+            });
+            
+            socket.on('booking_success', (data) => {
+                showToast(`✅ Booking successful at ${data.center} (+$${data.revenue})`, 'success');
+                updateStatsAfterBooking(data);
+            });
+            
+            socket.on('center_added', (data) => {
+                showToast(data.message, 'success');
+                loadCenters();
+            });
+            
+            socket.on('center_status_changed', (data) => {
+                showToast(data.message, 'success');
+                loadCenters();
+            });
+            
+            socket.on('analytics_data', (data) => {
+                updateAnalyticsCharts(data);
+            });
+        }
+
+        // Center management functions
+        function loadCenters() {
+            fetch('/api/centers')
+                .then(response => response.json())
+                .then(data => {
+                    centersData = data.centers;
+                    renderCenters();
+                    updateStatistics(data);
+                })
+                .catch(error => console.error('Error loading centers:', error));
+        }
+
+        function renderCenters() {
+            const grid = document.getElementById('centersGrid');
+            
+            if (centersData.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--text-secondary);">
+                        <h3>No centers found</h3>
+                        <p>Add your first center to get started</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = centersData.map(center => `
+                <div class="center-card">
+                    <div class="center-header">
+                        <div class="center-name">${center.name}</div>
+                        <div class="center-status ${center.status}"></div>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+                        📍 ${center.location} | 🤖 ${center.automation_level}
+                    </div>
+                    <div class="center-metrics">
+                        <div class="metric-item">
+                            <div class="metric-value">${center.bookings_today}</div>
+                            <div class="metric-label">Bookings</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">${center.success_rate.toFixed(1)}%</div>
+                            <div class="metric-label">Success Rate</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">$${center.current_revenue.toFixed(0)}</div>
+                            <div class="metric-label">Revenue</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${center.progress_percent}%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                        <span style="font-size: 12px; color: var(--text-secondary);">
+                            Progress: ${center.bookings_today}/${center.daily_target}
+                        </span>
+                        <button onclick="toggleCenterStatus('${center.id}')" 
+                                class="btn" 
+                                style="padding: 6px 12px; height: auto; font-size: 12px;">
+                            ${center.status === 'active' ? '⏸️ Pause' : '▶️ Resume'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleAddCenter() {
+            const form = document.getElementById('addCenterForm');
+            form.style.display = form.style.display === 'none' || form.style.display === '' ? 'block' : 'none';
+        }
+
+        function addCenter() {
+            const centerData = {
+                name: document.getElementById('centerName').value,
+                location: document.getElementById('centerLocation').value,
+                capacity: parseInt(document.getElementById('centerCapacity').value),
+                daily_target: parseInt(document.getElementById('dailyTarget').value),
+                automation_level: document.getElementById('automationLevel').value,
+                priority_level: parseInt(document.getElementById('priorityLevel').value)
+            };
+
+            // Validation
+            if (!centerData.name || !centerData.location || !centerData.capacity) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            fetch('/api/centers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(centerData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Center added successfully!', 'success');
+                    toggleAddCenter();
+                    // Clear form
+                    document.getElementById('centerName').value = '';
+                    document.getElementById('centerLocation').value = '';
+                    document.getElementById('centerCapacity').value = '';
+                    document.getElementById('dailyTarget').value = '';
+                    loadCenters();
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Failed to add center', 'error');
+            });
+        }
+
+        function toggleCenterStatus(centerId) {
+            fetch(`/api/centers/${centerId}/toggle`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadCenters();
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                });
+        }
+
+        // Automation control functions
+        function toggleAutomation() {
+            const toggle = document.getElementById('automationToggle');
+            const isActive = toggle.classList.contains('active');
+            
+            const endpoint = isActive ? '/api/automation/stop' : '/api/automation/start';
+            
+            fetch(endpoint, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        automationRunning = !isActive;
+                        toggle.classList.toggle('active');
+                        showToast(data.message, 'success');
+                        updateAutomationStatus();
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Failed to control automation', 'error');
+                });
+        }
+
+        function updateAutomationStatus() {
+            fetch('/api/automation/status')
+                .then(response => response.json())
+                .then(data => {
+                    automationRunning = data.running;
+                    const toggle = document.getElementById('automationToggle');
+                    toggle.classList.toggle('active', automationRunning);
+                });
+        }
+
+        // Analytics functions
+        function loadAnalytics() {
+            fetch('/api/analytics')
+                .then(response => response.json())
+                .then(data => {
+                    updateAnalyticsCharts(data);
+                })
+                .catch(error => console.error('Error loading analytics:', error));
+        }
+
+        function refreshAnalytics() {
+            document.querySelector('.analytics-section').classList.add('loading');
+            loadAnalytics();
+            setTimeout(() => {
+                document.querySelector('.analytics-section').classList.remove('loading');
+            }, 2000);
+        }
+
+        function updateAnalyticsCharts(data) {
+            updateBookingTrendsChart(data.hourly_booking_trends);
+            updateCenterPerformanceChart(data.center_performance);
+        }
+
+        function updateBookingTrendsChart(hourlyData) {
+            const ctx = document.getElementById('bookingTrendsChart').getContext('2d');
+            
+            if (charts.bookingTrends) {
+                charts.bookingTrends.destroy();
+            }
+            
+            const labels = hourlyData.map(item => item[0].split(' ')[1]);
+            const bookings = hourlyData.map(item => item[2]);
+            const attempts = hourlyData.map(item => item[1]);
+            
+            charts.bookingTrends = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Successful Bookings',
+                        data: bookings,
+                        borderColor: '#22C55E',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Total Attempts',
+                        data: attempts,
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#A1A1AA' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#A1A1AA' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#A1A1AA' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCenterPerformanceChart(performanceData) {
+            const ctx = document.getElementById('centerPerformanceChart').getContext('2d');
+            
+            if (charts.centerPerformance) {
+                charts.centerPerformance.destroy();
+            }
+            
+            const labels = performanceData.map(item => item[0]);
+            const successRates = performanceData.map(item => item[2]);
+            
+            charts.centerPerformance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Success Rate (%)',
+                        data: successRates,
+                        backgroundColor: [
+                            'rgba(124, 58, 237, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(245, 158, 11, 0.8)'
+                        ],
+                        borderColor: [
+                            '#7C3AED',
+                            '#3B82F6',
+                            '#22C55E',
+                            '#F59E0B'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#A1A1AA' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { 
+                                color: '#A1A1AA',
+                                maxRotation: 45
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#A1A1AA' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Statistics functions
+        function updateStatistics(data) {
+            document.getElementById('totalCenters').textContent = data.total;
+            document.getElementById('activeAutomations').textContent = data.active;
+            document.getElementById('dailyRevenue').textContent = `$${data.total_revenue.toLocaleString()}`;
+            
+            // Calculate average success rate
+            if (centersData.length > 0) {
+                const avgSuccessRate = centersData.reduce((sum, center) => sum + center.success_rate, 0) / centersData.length;
+                document.getElementById('successRate').textContent = `${avgSuccessRate.toFixed(1)}%`;
+            }
+        }
+
+        function updateStatsAfterBooking(bookingData) {
+            // Update revenue
+            const currentRevenue = parseFloat(document.getElementById('dailyRevenue').textContent.replace('$', '').replace(',', ''));
+            const newRevenue = currentRevenue + bookingData.revenue;
+            document.getElementById('dailyRevenue').textContent = `$${newRevenue.toLocaleString()}`;
+            
+            // Refresh centers data
+            loadCenters();
+        }
+
+        // Utility functions
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast show ${type}`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        function logout() {
+            fetch('/logout')
+                .then(() => {
+                    location.reload();
+                });
+        }
+
+        // Handle Enter key in password field
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && document.getElementById('authModal').style.display !== 'none') {
+                authenticate();
+            }
+        });
+
+        // Auto-refresh analytics every 30 seconds
+        setInterval(() => {
+            if (document.getElementById('centersGrid').children.length > 0) {
+                loadCenters();
+                loadAnalytics();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
